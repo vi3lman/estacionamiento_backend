@@ -56,9 +56,10 @@ class ConductorRead(ConductorBase):
 
 #schemas para la ocupacion
 class OcupacionBase(BaseModel):
+    id_calle: int
     id_espacio: int
-    id_vehiculo: int
-    id_conductor: int
+    vehiculo: VehiculoCreate
+    conductor: ConductorCreate
     tiempo_estimado: int
     fecha_hora_inicio: datetime
     #fecha_hora_fin_real: Optional[datetime] = None

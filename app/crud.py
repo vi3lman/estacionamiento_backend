@@ -62,11 +62,24 @@ def espacio_esta_ocupado(db: Session, id_espacio: int, fecha_hora_ingreso: datet
 
 
 # CRUD para Vehiculo
-def create_vehiculo(db: Session, vehiculo: VehiculoCreate)->Vehiculo:
-    db_vehiculo = Vehiculo(chapa=vehiculo.chapa, tipo=vehiculo.tipo)
+def create_vehiculo(db: Session, vehiculo: VehiculoCreate) -> Vehiculo:
+    chapa_normalizada = vehiculo.chapa.strip().upper()
+
+    db_vehiculo = db.query(Vehiculo).filter(
+        Vehiculo.chapa == chapa_normalizada
+    ).first()
+
+    if db_vehiculo:
+        return db_vehiculo
+
+    db_vehiculo = Vehiculo(
+        chapa=chapa_normalizada,
+        tipo=vehiculo.tipo
+    )
+
     db.add(db_vehiculo)
-    db.commit()
-    db.refresh(db_vehiculo)
+    db.flush()
+
     return db_vehiculo
 
 def get_vehiculos(db: Session, skip: int = 0, limit: int = 100)->list[Vehiculo]:
@@ -74,10 +87,23 @@ def get_vehiculos(db: Session, skip: int = 0, limit: int = 100)->list[Vehiculo]:
 
 # CRUD para Conductor
 def create_conductor(db: Session, conductor: ConductorCreate)->Conductor:
-    db_conductor = Conductor(nombre=conductor.nombre, nro_documento=conductor.nro_documento)
+    nro_documento_normalizado = conductor.nro_documento.strip()
+
+    db_conductor = db.query(Conductor).filter(
+        Conductor.nro_documento == nro_documento_normalizado
+    ).first()
+
+    if db_conductor:
+        return db_conductor
+
+    db_conductor = Conductor(
+        nombre=conductor.nombre.strip(),
+        nro_documento=nro_documento_normalizado
+    )
+
     db.add(db_conductor)
-    db.commit()
-    db.refresh(db_conductor)
+    db.flush()
+
     return db_conductor
 
 def get_conductores(db: Session, skip: int = 0, limit: int = 100)->list[Conductor]:
@@ -85,23 +111,60 @@ def get_conductores(db: Session, skip: int = 0, limit: int = 100)->list[Conducto
 
 # CRUD para Ocupacion
 #aqui se crea la ocupacion y la tarifa correspondiente
-def create_ocupacion(db: Session, ocupacion: OcupacionCreate)->Ocupacion:
+def create_ocupacion(db: Session, ocupacion: OcupacionCreate) -> Ocupacion:
+    try:
+        # 1. Crear vehículo
+        db_vehiculo = create_vehiculo(db, ocupacion.vehiculo)
 
+        # 2. Crear conductor
+        db_conductor = create_conductor(db, ocupacion.conductor)
 
-    db_ocupacion = Ocupacion(
-        id_espacio=ocupacion.id_espacio,
-        id_vehiculo=ocupacion.id_vehiculo,
-        id_conductor=ocupacion.id_conductor,
-        tiempo_estimado=ocupacion.tiempo_estimado,
-        fecha_hora_inicio=ocupacion.fecha_hora_inicio,
-        fecha_hora_fin=ocupacion.fecha_hora_inicio + timedelta(minutes=ocupacion.tiempo_estimado),
-        estado="confirmado"  # Por defecto, al crear una ocupación, el estado es "confirmado"
-    )
+        db.add(db_conductor)
+        db.flush()
 
-    db.add(db_ocupacion)
-    db.commit()
-    db.refresh(db_ocupacion)
-    return db_ocupacion
+        # 3. Calcular fecha de fin
+        fecha_hora_fin = ocupacion.fecha_hora_inicio + timedelta(
+            minutes=ocupacion.tiempo_estimado
+        )
+
+        # 4. Crear ocupación
+        db_ocupacion = Ocupacion(
+            id_calle=ocupacion.id_calle,
+            id_espacio=ocupacion.id_espacio,
+            id_vehiculo=db_vehiculo.id_vehiculo,
+            id_conductor=db_conductor.id_conductor,
+            tiempo_estimado=ocupacion.tiempo_estimado,
+            fecha_hora_inicio=ocupacion.fecha_hora_inicio,
+            fecha_hora_fin=fecha_hora_fin,
+            estado="confirmado"
+        )
+
+        db.add(db_ocupacion)
+        db.flush()
+        
+
+        # 5. Crear tarifa automáticamente
+        monto_base = calcular_tarifa_precio(db, db_ocupacion.tiempo_estimado)
+
+        db_tarifa = Tarifa(
+            id_ocupacion=db_ocupacion.id_ocupacion,
+            monto_tarifa_base=monto_base,
+            estado_multa="NO APLICA",
+            monto_multa=Decimal("0.00")
+        )
+
+        db.add(db_tarifa)
+        db.flush()
+
+        # 6. Confirmar todo junto
+        db.commit()
+        db.refresh(db_ocupacion)
+
+        return db_ocupacion
+
+    except Exception as e:
+        db.rollback()
+        raise e
 
 def get_ocupaciones(db: Session, skip: int = 0, limit: int = 100)->list[Ocupacion]:
     return db.query(Ocupacion).offset(skip).limit(limit).all()

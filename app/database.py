@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # 1. URL de conexión a tu base de datos PostgreSQL
-DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/estacionamiento_db"
+DATABASE_URL = "postgresql://postgres:1234@localhost:5432/estacionamiento_db"
 
 # 2. Creación del motor (Engine)
 # El engine es el responsable de establecer la conexión real con Postgres

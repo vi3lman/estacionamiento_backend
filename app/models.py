@@ -49,6 +49,7 @@ class Ocupacion(Base):
     __tablename__ = "ocupacion"
 
     id_ocupacion = Column(Integer, primary_key=True, index=True)
+    id_calle = Column(Integer, ForeignKey("calle.id_calle", ondelete="CASCADE"), nullable=False)
     id_espacio = Column(Integer, ForeignKey("espacio.id_espacio", ondelete="CASCADE"), nullable=False)
     id_vehiculo = Column(Integer, ForeignKey("vehiculo.id_vehiculo", ondelete="CASCADE"), nullable=False)
     id_conductor = Column(Integer, ForeignKey("conductor.id_conductor", ondelete="CASCADE"), nullable=False)
@@ -63,6 +64,7 @@ class Ocupacion(Base):
     vehiculo = relationship("Vehiculo")
     conductor = relationship("Conductor")
     tarifa = relationship("Tarifa", uselist=False, back_populates="ocupacion")
+    calle= relationship("Calle") 
 
     __table_args__ = (
         UniqueConstraint("id_espacio", "fecha_hora_inicio", name="uq_ocupacion_espacio_tiempo"),

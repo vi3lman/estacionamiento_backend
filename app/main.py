@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from .database import get_db, engine
 from .models import *
-from .crud import create_calle, create_espacio, get_calles, get_espacios_por_calle
+from .crud import create_calle, create_espacio, create_ocupacion, get_calles, get_espacios_por_calle
 from .schemas import *
 from app import models
 
@@ -55,3 +55,7 @@ def create_calle_endpoint(calle: CalleCreate, db: Session = Depends(get_db)):
 @app.post("/espacios/", response_model=EspacioRead)
 def create_espacio_endpoint(espacio: EspacioCreate, db: Session = Depends(get_db)):
     return create_espacio(db=db, espacio=espacio)
+
+@app.post("/ocupaciones")
+def crear_ocupacion(ocupacion: OcupacionCreate,db: Session = Depends(get_db)):
+    return create_ocupacion(db, ocupacion)
