@@ -1,11 +1,11 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from .database import get_db, engine
 from .models import *
-from .crud import create_calle, create_espacio, get_calles, get_espacios_por_calle
+from .crud import create_calle, create_espacio, get_calles, get_espacios_libres_por_calle, get_espacios_por_calle, marcar_salida_ocupacion, reportar_infraccion
 from .schemas import *
 from app import models
 
@@ -55,3 +55,40 @@ def create_calle_endpoint(calle: CalleCreate, db: Session = Depends(get_db)):
 @app.post("/espacios/", response_model=EspacioRead)
 def create_espacio_endpoint(espacio: EspacioCreate, db: Session = Depends(get_db)):
     return create_espacio(db=db, espacio=espacio)
+
+@app.get("/espacios/libres/{id_calle}", response_model=list[EspacioRead])
+def get_espacios_libres_por_calle_endpoint(id_calle: int, fecha_hora_ingreso: datetime, tiempo_estimado: int, db: Session = Depends(get_db)):
+    if fecha_hora_ingreso < datetime.now():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="La fecha y hora de ingreso no puede ser en el pasado."
+        )
+    espacios_libres = get_espacios_libres_por_calle(db=db, id_calle=id_calle, fecha_hora_ingreso=fecha_hora_ingreso, tiempo_estimado=tiempo_estimado)
+    return espacios_libres
+
+
+
+@app.post("/espacios/{id_espacio}/infraccion", response_model=OcupacionRead)
+def reportar_infraccion_endpoint(id_espacio: int, db: Session = Depends(get_db)):
+    
+    ocupacion_infractora = reportar_infraccion(db=db, id_espacio=id_espacio)
+    
+    if not ocupacion_infractora:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"No hay ocupación para el espacio {id_espacio} o el tiempo aún no ha expirado."
+        )
+    
+    return ocupacion_infractora
+
+@app.post("/ocupaciones/{id_ocupacion}/finalizar", response_model=OcupacionRead)
+def marcar_salida_endpoint(id_ocupacion: int, db: Session = Depends(get_db)):
+    ocupacion_finalizada = marcar_salida_ocupacion(db=db, id_ocupacion=id_ocupacion)
+    
+    if not ocupacion_finalizada:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"No se encontró la ocupación con id {id_ocupacion} o ya fue finalizada."
+        )
+    
+    return ocupacion_finalizada

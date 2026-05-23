@@ -1,10 +1,11 @@
 from .schemas import *
-from .models import *
+from .models import Ocupacion, Tarifa, Conductor, Vehiculo, Espacio, Calle
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from datetime import timedelta
 from decimal import Decimal
 from datetime import datetime
+from typing import Optional
 
 # CRUD para Calle
 def create_calle(db: Session, calle: CalleCreate):
@@ -36,77 +37,50 @@ def get_espacios(db: Session, skip: int = 0, limit: int = 100)->list[Espacio]:
 def get_espacios_por_calle(db: Session, id_calle: int, skip: int = 0, limit: int = 100)->list[Espacio]:
     return db.query(Espacio).filter(Espacio.id_calle == id_calle).offset(skip).limit(limit).all()
 
-def get_espacio_libre_por_calle(db: Session, id_calle: int, fecha_hora_ingreso: datetime, tiempo_estimado: int)->Espacio:
-    subquery_ocupados = db.query(Ocupacion.id_espacio).filter(Ocupacion.estado == "confirmado").subquery()
-    espacio_libre = db.query(Espacio).filter(Espacio.id_calle == id_calle, ~Espacio.id_espacio.in_(subquery_ocupados)).first()
-    return espacio_libre
+def get_espacios_libres_por_calle(db: Session, id_calle: int, fecha_hora_ingreso: datetime, tiempo_estimado: int)->list[Espacio]:
+    espacios = db.query(Espacio).filter(Espacio.id_calle == id_calle).all()
+    espacios_libres: list[Espacio]= []
+    for espacio in espacios:
+        if not espacio_esta_ocupado(db, espacio.id_espacio, fecha_hora_ingreso, tiempo_estimado):
+            espacios_libres.append(espacio)
+    return espacios_libres
+
 
 def espacio_esta_ocupado(db: Session, id_espacio: int, fecha_hora_ingreso: datetime, tiempo_estimado: int)->bool:
+    if fecha_hora_ingreso < datetime.now():
+        return True
     fecha_hora_fin_estimada = fecha_hora_ingreso + timedelta(minutes=tiempo_estimado)
+    tolerancia_minutos = timedelta(minutes=5)  # Tolerancia de 5 minutos
     ocupaciones = db.query(Ocupacion).filter(
         Ocupacion.id_espacio == id_espacio,
         Ocupacion.estado == "confirmado",
-        Ocupacion.fecha_hora_fin_real != None,
+        Ocupacion.fecha_hora_fin_real == None,
         or_(
-            and_(Ocupacion.fecha_hora_inicio <= fecha_hora_ingreso, Ocupacion.fecha_hora_fin > fecha_hora_ingreso),
-            and_(Ocupacion.fecha_hora_inicio < fecha_hora_fin_estimada, Ocupacion.fecha_hora_fin >= fecha_hora_fin_estimada),
-            and_(Ocupacion.fecha_hora_inicio >= fecha_hora_ingreso, Ocupacion.fecha_hora_fin <= fecha_hora_fin_estimada)
+            and_(Ocupacion.fecha_hora_inicio <= fecha_hora_ingreso, Ocupacion.fecha_hora_fin + tolerancia_minutos > fecha_hora_ingreso),
+            and_(Ocupacion.fecha_hora_inicio < fecha_hora_fin_estimada, Ocupacion.fecha_hora_fin + tolerancia_minutos >= fecha_hora_fin_estimada),
+            and_(Ocupacion.fecha_hora_inicio >= fecha_hora_ingreso, Ocupacion.fecha_hora_fin + tolerancia_minutos <= fecha_hora_fin_estimada)
         )
     ).all()
     return len(ocupaciones) > 0
 
 
-
-
-
-
-
 # CRUD para Vehiculo
-def create_vehiculo(db: Session, vehiculo: VehiculoCreate)->Vehiculo:
-    db_vehiculo = Vehiculo(chapa=vehiculo.chapa, tipo=vehiculo.tipo)
-    db.add(db_vehiculo)
-    db.commit()
-    db.refresh(db_vehiculo)
-    return db_vehiculo
 
 def get_vehiculos(db: Session, skip: int = 0, limit: int = 100)->list[Vehiculo]:
     return db.query(Vehiculo).offset(skip).limit(limit).all()
 
 # CRUD para Conductor
-def create_conductor(db: Session, conductor: ConductorCreate)->Conductor:
-    db_conductor = Conductor(nombre=conductor.nombre, nro_documento=conductor.nro_documento)
-    db.add(db_conductor)
-    db.commit()
-    db.refresh(db_conductor)
-    return db_conductor
 
 def get_conductores(db: Session, skip: int = 0, limit: int = 100)->list[Conductor]:
     return db.query(Conductor).offset(skip).limit(limit).all()
 
 # CRUD para Ocupacion
 #aqui se crea la ocupacion y la tarifa correspondiente
-def create_ocupacion(db: Session, ocupacion: OcupacionCreate)->Ocupacion:
-
-
-    db_ocupacion = Ocupacion(
-        id_espacio=ocupacion.id_espacio,
-        id_vehiculo=ocupacion.id_vehiculo,
-        id_conductor=ocupacion.id_conductor,
-        tiempo_estimado=ocupacion.tiempo_estimado,
-        fecha_hora_inicio=ocupacion.fecha_hora_inicio,
-        fecha_hora_fin=ocupacion.fecha_hora_inicio + timedelta(minutes=ocupacion.tiempo_estimado),
-        estado="confirmado"  # Por defecto, al crear una ocupación, el estado es "confirmado"
-    )
-
-    db.add(db_ocupacion)
-    db.commit()
-    db.refresh(db_ocupacion)
-    return db_ocupacion
 
 def get_ocupaciones(db: Session, skip: int = 0, limit: int = 100)->list[Ocupacion]:
     return db.query(Ocupacion).offset(skip).limit(limit).all()
 
-def create_tarifa(db: Session, id_ocupacion: int)->Tarifa:
+def create_tarifa(db: Session, id_ocupacion: int)->Optional[Tarifa]:
     db_ocupacion = db.query(Ocupacion).filter(Ocupacion.id_ocupacion == id_ocupacion).first()
     if db_ocupacion:
         precio = calcular_tarifa_precio(db, db_ocupacion.tiempo_estimado)
@@ -123,22 +97,42 @@ def calcular_tarifa_precio(db: Session, tiempo_estimado: int)->Decimal:
     return Decimal(str(tarifa_base + (tarifa_por_minuto * tiempo_estimado)))
 
 
-def marcar_salida_ocupacion(db: Session, id_ocupacion: int)->Ocupacion:
+def marcar_salida_ocupacion(db: Session, id_ocupacion: int)->Optional[Ocupacion]:
     db_ocupacion = db.query(Ocupacion).filter(Ocupacion.id_ocupacion == id_ocupacion).first()
+    fecha_hora_fin_real = datetime.now()
     if db_ocupacion:
-        db_ocupacion.fecha_hora_fin_real = datetime.now()
+        db_ocupacion.fecha_hora_fin_real = fecha_hora_fin_real
         db_ocupacion.estado = "finalizado"
-        db.commit()
-        db.refresh(db_ocupacion)
 
-        if db_ocupacion.fecha_hora_fin_real > db_ocupacion.fecha_hora_fin:
+
+
+        if  fecha_hora_fin_real > db_ocupacion.fecha_hora_fin:
             db_ocupacion.tarifa.estado_multa = "aplica"
             db_ocupacion.tarifa.monto_multa = calcular_multa(db_ocupacion.fecha_hora_fin_real, db_ocupacion.fecha_hora_fin)
-            db.commit()
-            db.refresh(db_ocupacion.tarifa)
+
+        db.commit()
+        db.refresh(db_ocupacion)    
     return db_ocupacion
 
 def calcular_multa(fecha_hora_fin_real: datetime, fecha_hora_fin: datetime)->Decimal:
     minutos_excedidos = (fecha_hora_fin_real - fecha_hora_fin).total_seconds() / 60   
     multa_por_minuto = 1.00  # Monto de la multa por minuto excedido
     return Decimal(str(minutos_excedidos * multa_por_minuto))
+
+
+
+def reportar_infraccion(db: Session, id_espacio: int)->Optional[Ocupacion]:
+    db_ocupacion = db.query(Ocupacion).filter(
+        Ocupacion.id_espacio == id_espacio,
+        Ocupacion.estado == "confirmado",
+        Ocupacion.fecha_hora_fin_real == None,
+        Ocupacion.fecha_hora_fin < datetime.now()
+    ).first()
+    if db_ocupacion:
+        db_ocupacion.estado = "cancelado"
+        db_ocupacion.tarifa.estado_multa = "aplica"
+        db_ocupacion.tarifa.monto_multa = calcular_multa(datetime.now(), db_ocupacion.fecha_hora_fin)
+        db.commit()
+        db.refresh(db_ocupacion)
+        return db_ocupacion
+    return None
