@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from .database import get_db, engine
 from .models import *
-from .crud import create_calle, create_espacio, get_calles, get_espacios_libres_por_calle, get_espacios_por_calle, marcar_salida_ocupacion, reportar_infraccion
+from .crud import *
 from .schemas import *
 from app import models
 
@@ -58,7 +58,31 @@ def create_espacio_endpoint(espacio: EspacioCreate, db: Session = Depends(get_db
 
 @app.post("/ocupaciones")
 def crear_ocupacion(ocupacion: OcupacionCreate,db: Session = Depends(get_db)):
+     # 1. Validar que el espacio pertenezca a la calle seleccionada
+    if not espacio_pertenece_a_calle(
+        db=db,
+        id_espacio=ocupacion.id_espacio,
+        id_calle=ocupacion.id_calle
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="El espacio seleccionado no pertenece a la calle indicada."
+        )
+     # 2. Validar que el espacio no esté ocupado en el horario solicitado
+    ocupado = espacio_esta_ocupado(
+        db=db,
+        id_espacio=ocupacion.id_espacio,
+        fecha_hora_ingreso=ocupacion.fecha_hora_inicio,
+        tiempo_estimado=ocupacion.tiempo_estimado
+    )
+    if ocupado:
+        raise HTTPException(
+            status_code=409,
+            detail="El espacio ya está ocupado en ese horario o la fecha ingresada no es válida."
+        )
+
     return create_ocupacion(db, ocupacion)
+
 @app.get("/espacios/libres/{id_calle}", response_model=list[EspacioRead])
 def get_espacios_libres_por_calle_endpoint(id_calle: int, fecha_hora_ingreso: datetime, tiempo_estimado: int, db: Session = Depends(get_db)):
     if fecha_hora_ingreso < datetime.now():
@@ -93,5 +117,4 @@ def marcar_salida_endpoint(id_ocupacion: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND, 
             detail=f"No se encontró la ocupación con id {id_ocupacion} o ya fue finalizada."
         )
-    
     return ocupacion_finalizada

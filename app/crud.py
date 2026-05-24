@@ -201,7 +201,7 @@ def marcar_salida_ocupacion(db: Session, id_ocupacion: int)->Optional[Ocupacion]
 
 
         if  fecha_hora_fin_real > db_ocupacion.fecha_hora_fin:
-            db_ocupacion.tarifa.estado_multa = "aplica"
+            db_ocupacion.tarifa.estado_multa = "APLICA"
             db_ocupacion.tarifa.monto_multa = calcular_multa(db_ocupacion.fecha_hora_fin_real, db_ocupacion.fecha_hora_fin)
 
         db.commit()
@@ -230,3 +230,11 @@ def reportar_infraccion(db: Session, id_espacio: int)->Optional[Ocupacion]:
         db.refresh(db_ocupacion)
         return db_ocupacion
     return None
+
+def espacio_pertenece_a_calle(db: Session, id_espacio: int, id_calle: int) -> bool:
+    espacio = db.query(Espacio).filter(
+        Espacio.id_espacio == id_espacio,
+        Espacio.id_calle == id_calle
+    ).first()
+
+    return espacio is not None
