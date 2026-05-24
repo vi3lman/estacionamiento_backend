@@ -5,7 +5,7 @@ from sqlalchemy import or_, and_
 from datetime import timedelta
 from decimal import Decimal
 from datetime import datetime
-from typing import Optional
+from typing import List, Dict, Optional
 
 # CRUD para Calle
 def create_calle(db: Session, calle: CalleCreate):
@@ -174,6 +174,42 @@ def create_ocupacion(db: Session, ocupacion: OcupacionCreate) -> Ocupacion:
 def get_ocupaciones(db: Session, skip: int = 0, limit: int = 100)->list[Ocupacion]:
     return db.query(Ocupacion).offset(skip).limit(limit).all()
 
+
+
+def get_ocupaciones_por_conductor(db: Session, id_conductor: int) -> List[Dict]:
+
+    resultados = (
+        db.query(Ocupacion, Espacio, Calle, Vehiculo, Tarifa)
+        .join(Espacio, Ocupacion.id_espacio == Espacio.id_espacio)
+        .join(Calle, Espacio.id_calle == Calle.id_calle)
+        .join(Vehiculo, Ocupacion.id_vehiculo == Vehiculo.id_vehiculo)
+        .join(Tarifa, Ocupacion.id_ocupacion == Tarifa.id_ocupacion)
+        .filter(Ocupacion.id_conductor == id_conductor)
+        .all()
+    )
+
+
+    lista_ocupaciones = []
+
+
+    for ocupacion, espacio, calle, vehiculo, tarifa in resultados:
+        lista_ocupaciones.append({
+            "id_ocupacion": ocupacion.id_ocupacion,
+            "nombre_calle": calle.nombre_calle,
+            "numero_espacio": espacio.nro_espacio,
+            "chapa_vehiculo": vehiculo.chapa,
+            "tiempo_estimado": ocupacion.tiempo_estimado,
+            "fecha_hora_inicio": ocupacion.fecha_hora_inicio,
+            "fecha_hora_fin": ocupacion.fecha_hora_fin,
+            "fecha_hora_fin_real": ocupacion.fecha_hora_fin_real,
+            "estado": ocupacion.estado,
+            "monto_tarifa_base": tarifa.monto_tarifa_base,
+            "estado_multa": tarifa.estado_multa,
+            "monto_multa": tarifa.monto_multa,
+            "monto_total": tarifa.monto_tarifa_base + tarifa.monto_multa
+        })
+    return lista_ocupaciones
+
 def create_tarifa(db: Session, id_ocupacion: int)-> Optional[Tarifa]:
     db_ocupacion = db.query(Ocupacion).filter(Ocupacion.id_ocupacion == id_ocupacion).first()
     if db_ocupacion:
@@ -230,3 +266,8 @@ def reportar_infraccion(db: Session, id_espacio: int)->Optional[Ocupacion]:
         db.refresh(db_ocupacion)
         return db_ocupacion
     return None
+
+
+
+def get_conductores(db: Session, skip: int = 0, limit: int = 100)->list[Conductor]:
+    return db.query(Conductor).offset(skip).limit(limit).all()
