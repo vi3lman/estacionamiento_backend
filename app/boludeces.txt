@@ -1,0 +1,4 @@
+select nro_espacio from nro_espacio
+where id_calle = id_calle_recibido
+order by nro_espacio desc;
+
