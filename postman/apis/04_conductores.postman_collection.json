@@ -1,0 +1,51 @@
+{
+  "info": {
+    "_postman_id": "52bb59c9-0527-46d4-86bd-b8271e6abc04",
+    "name": "API Estacionamiento - Conductores",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET /conductores - listar conductores",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const conductores = pm.response.json();",
+              "const creado = conductores.find(c => c.nro_documento === pm.environment.get('docDemo'));",
+              "if (creado) pm.environment.set('conductorId', creado.id_conductor);",
+              "else if (conductores.length > 0) pm.environment.set('conductorId', conductores[0].id_conductor);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/conductores?skip=0&limit=100",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "conductores"
+          ],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "info": {
+    "_postman_id": "42a903fa-1ce8-47c5-b536-18924c89ab02",
+    "name": "API Estacionamiento - Calles",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "POST /calles - crear calle",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('calleNombre', `Demo Calle ${Date.now()}`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.environment.set('calleId', json.id_calle);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_calle\": \"{{calleNombre}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/calles",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calles"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET /calles - listar calles",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const calles = pm.response.json();",
+              "if (calles.length > 0) pm.environment.set('calleId', calles[calles.length - 1].id_calle);",
+              "pm.test('Respuesta es lista', function () { pm.expect(calles).to.be.an('array'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/calles?skip=0&limit=100",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calles"
+          ],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

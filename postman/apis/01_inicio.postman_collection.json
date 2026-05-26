@@ -1,0 +1,38 @@
+{
+  "info": {
+    "_postman_id": "9b70eb44-b8a5-4719-9a37-2ca4a1a19801",
+    "name": "API Estacionamiento - Inicio",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET /",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Mensaje de bienvenida', function () { pm.expect(pm.response.json().message).to.include('Bienvenido'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            ""
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

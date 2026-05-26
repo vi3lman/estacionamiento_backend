@@ -1,0 +1,239 @@
+{
+  "info": {
+    "_postman_id": "3f76fe8d-3c27-40bf-9f9b-a22eb23f2505",
+    "name": "API Estacionamiento - Ocupaciones",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "POST /ocupaciones - crear ocupacion futura",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const stamp = Date.now();",
+              "pm.environment.set('fechaInicioFutura', new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString());",
+              "pm.environment.set('docDemo', `CI-${stamp}`);",
+              "pm.environment.set('chapaDemo', `DEMO${String(stamp).slice(-6)}`);",
+              "pm.environment.set('tiempoEstimado', '120');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.environment.set('ocupacionId', json.id_ocupacion);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id_calle\": {{calleId}},\n  \"id_espacio\": {{espacioId}},\n  \"vehiculo\": {\n    \"chapa\": \"{{chapaDemo}}\",\n    \"tipo\": \"Auto\"\n  },\n  \"conductor\": {\n    \"nombre\": \"Conductor Demo\",\n    \"nro_documento\": \"{{docDemo}}\"\n  },\n  \"tiempo_estimado\": {{tiempoEstimado}},\n  \"fecha_hora_inicio\": \"{{fechaInicioFutura}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET /ocupaciones - listar ocupaciones",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const ocupaciones = pm.response.json();",
+              "if (ocupaciones.length > 0) pm.environment.set('ocupacionId', ocupaciones[ocupaciones.length - 1].id_ocupacion);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones?skip=0&limit=100",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones"
+          ],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET /ocupaciones/{id_conductor} - por conductor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 o 404', function () { pm.expect([200, 404]).to.include(pm.response.code); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones/{{conductorId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones",
+            "{{conductorId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /ocupaciones/{id_ocupacion}/modificar",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('nuevaFechaInicioFutura', new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones/{{ocupacionId}}/modificar?nueva_fecha_hora_inicio={{nuevaFechaInicioFutura}}&nuevo_tiempo_estimado=90",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones",
+            "{{ocupacionId}}",
+            "modificar"
+          ],
+          "query": [
+            {
+              "key": "nueva_fecha_hora_inicio",
+              "value": "{{nuevaFechaInicioFutura}}"
+            },
+            {
+              "key": "nuevo_tiempo_estimado",
+              "value": "90"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /ocupaciones/{id_ocupacion}/cancelar",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 o 400 segun anticipacion', function () { pm.expect([200, 400, 404]).to.include(pm.response.code); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones/{{ocupacionId}}/cancelar",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones",
+            "{{ocupacionId}}",
+            "cancelar"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /ocupaciones/{id_ocupacion}/finalizar",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200, 400 o 404', function () { pm.expect([200, 400, 404]).to.include(pm.response.code); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones/{{ocupacionId}}/finalizar",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones",
+            "{{ocupacionId}}",
+            "finalizar"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

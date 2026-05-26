@@ -1,0 +1,639 @@
+{
+  "info": {
+    "_postman_id": "e51f7560-99c3-4d28-9c47-71219ef7af20",
+    "name": "Estacionamiento - Demo Completa",
+    "description": "Flujo completo para probar la API local de estacionamiento. Importar junto con el ambiente Estacionamiento - Local.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Inicio",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Mensaje de bienvenida', function () {",
+              "  pm.expect(pm.response.json().message).to.include('Bienvenido');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "02 - Crear calle",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const suffix = Date.now();",
+              "pm.environment.set('calleNombre', `Demo Calle ${suffix}`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.environment.set('calleId', json.id_calle);",
+              "pm.test('Guarda calleId', function () { pm.expect(json.id_calle).to.be.a('number'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_calle\": \"{{calleNombre}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/calles",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calles"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "03 - Listar calles",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const calles = pm.response.json();",
+              "const creada = calles.find(c => c.nombre_calle === pm.environment.get('calleNombre'));",
+              "if (creada) pm.environment.set('calleId', creada.id_calle);",
+              "pm.test('Respuesta es lista', function () { pm.expect(calles).to.be.an('array'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/calles?skip=0&limit=100",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "calles"
+          ],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "04 - Crear espacio",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.environment.set('espacioId', json.id_espacio);",
+              "pm.test('Guarda espacioId', function () { pm.expect(json.id_espacio).to.be.a('number'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id_calle\": {{calleId}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/espacios",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "espacios"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "05 - Listar espacios por calle",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const espacios = pm.response.json();",
+              "if (espacios.length > 0) pm.environment.set('espacioId', espacios[0].id_espacio);",
+              "pm.test('Respuesta es lista', function () { pm.expect(espacios).to.be.an('array'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/espacios/{{calleId}}?skip=0&limit=100",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "espacios",
+            "{{calleId}}"
+          ],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "06 - Espacios libres por calle",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('fechaInicioFutura', new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString());",
+              "pm.environment.set('tiempoEstimado', '120');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Respuesta es lista', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/espacios/libres/{{calleId}}?fecha_hora_ingreso={{fechaInicioFutura}}&tiempo_estimado={{tiempoEstimado}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "espacios",
+            "libres",
+            "{{calleId}}"
+          ],
+          "query": [
+            {
+              "key": "fecha_hora_ingreso",
+              "value": "{{fechaInicioFutura}}"
+            },
+            {
+              "key": "tiempo_estimado",
+              "value": "{{tiempoEstimado}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "07 - Crear ocupacion futura",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const stamp = Date.now();",
+              "pm.environment.set('fechaInicioFutura', new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString());",
+              "pm.environment.set('docDemo', `CI-${stamp}`);",
+              "pm.environment.set('chapaDemo', `DEMO${String(stamp).slice(-6)}`);",
+              "pm.environment.set('tiempoEstimado', '120');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.environment.set('ocupacionId', json.id_ocupacion);",
+              "pm.test('Guarda ocupacionId', function () { pm.expect(json.id_ocupacion).to.be.a('number'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id_calle\": {{calleId}},\n  \"id_espacio\": {{espacioId}},\n  \"vehiculo\": {\n    \"chapa\": \"{{chapaDemo}}\",\n    \"tipo\": \"Auto\"\n  },\n  \"conductor\": {\n    \"nombre\": \"Conductor Demo\",\n    \"nro_documento\": \"{{docDemo}}\"\n  },\n  \"tiempo_estimado\": {{tiempoEstimado}},\n  \"fecha_hora_inicio\": \"{{fechaInicioFutura}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "08 - Listar conductores",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const conductores = pm.response.json();",
+              "const creado = conductores.find(c => c.nro_documento === pm.environment.get('docDemo'));",
+              "if (creado) pm.environment.set('conductorId', creado.id_conductor);",
+              "pm.test('Respuesta es lista', function () { pm.expect(conductores).to.be.an('array'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/conductores?skip=0&limit=100",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "conductores"
+          ],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "09 - Listar ocupaciones",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const ocupaciones = pm.response.json();",
+              "if (ocupaciones.length > 0) pm.environment.set('ocupacionId', ocupaciones[ocupaciones.length - 1].id_ocupacion);",
+              "pm.test('Respuesta es lista', function () { pm.expect(ocupaciones).to.be.an('array'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones?skip=0&limit=100",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones"
+          ],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10 - Ocupaciones por conductor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Respuesta es lista', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones/{{conductorId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones",
+            "{{conductorId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "11 - Modificar ocupacion",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('nuevaFechaInicioFutura', new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.environment.set('ocupacionId', json.id_ocupacion);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones/{{ocupacionId}}/modificar?nueva_fecha_hora_inicio={{nuevaFechaInicioFutura}}&nuevo_tiempo_estimado=90",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones",
+            "{{ocupacionId}}",
+            "modificar"
+          ],
+          "query": [
+            {
+              "key": "nueva_fecha_hora_inicio",
+              "value": "{{nuevaFechaInicioFutura}}"
+            },
+            {
+              "key": "nuevo_tiempo_estimado",
+              "value": "90"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "12 - Cancelar ocupacion",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Estado cancelado', function () { pm.expect(pm.response.json().estado).to.equal('cancelado'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones/{{ocupacionId}}/cancelar",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones",
+            "{{ocupacionId}}",
+            "cancelar"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "13 - Crear ocupacion corta para finalizar",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const stamp = Date.now();",
+              "const start = Date.now() + 5000;",
+              "pm.environment.set('fechaInicioFutura', new Date(start).toISOString());",
+              "pm.environment.set('finalizarDesde', String(start + 1000));",
+              "pm.environment.set('docDemo', `CI-FIN-${stamp}`);",
+              "pm.environment.set('chapaDemo', `FIN${String(stamp).slice(-6)}`);",
+              "pm.environment.set('tiempoEstimado', '30');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.environment.set('ocupacionFinalizarId', json.id_ocupacion);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id_calle\": {{calleId}},\n  \"id_espacio\": {{espacioId}},\n  \"vehiculo\": {\n    \"chapa\": \"{{chapaDemo}}\",\n    \"tipo\": \"Moto\"\n  },\n  \"conductor\": {\n    \"nombre\": \"Conductor Finalizar\",\n    \"nro_documento\": \"{{docDemo}}\"\n  },\n  \"tiempo_estimado\": {{tiempoEstimado}},\n  \"fecha_hora_inicio\": \"{{fechaInicioFutura}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "14 - Finalizar ocupacion",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const finalizarDesde = Number(pm.environment.get('finalizarDesde') || 0);",
+              "while (finalizarDesde && Date.now() < finalizarDesde) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Estado finalizado', function () { pm.expect(pm.response.json().estado).to.equal('finalizado'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/ocupaciones/{{ocupacionFinalizarId}}/finalizar",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocupaciones",
+            "{{ocupacionFinalizarId}}",
+            "finalizar"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "15 - Reportar infraccion",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 o 404', function () { pm.expect([200, 404]).to.include(pm.response.code); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/espacios/{{espacioId}}/infraccion",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "espacios",
+            "{{espacioId}}",
+            "infraccion"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

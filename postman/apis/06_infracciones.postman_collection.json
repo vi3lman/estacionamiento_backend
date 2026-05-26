@@ -1,0 +1,40 @@
+{
+  "info": {
+    "_postman_id": "8c92bd7f-577a-4826-aacb-5facdfbf6b06",
+    "name": "API Estacionamiento - Infracciones",
+    "description": "Este endpoint requiere una ocupacion confirmada y vencida para devolver 200. Si no existe, el backend devuelve 404.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "POST /espacios/{id_espacio}/infraccion",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 o 404', function () { pm.expect([200, 404]).to.include(pm.response.code); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/espacios/{{espacioId}}/infraccion",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "espacios",
+            "{{espacioId}}",
+            "infraccion"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
