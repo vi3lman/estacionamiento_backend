@@ -83,6 +83,18 @@ class Tarifa(Base):
     ocupacion = relationship("Ocupacion", back_populates="tarifa", uselist=False)
     factura = relationship("Factura", uselist=False, back_populates="tarifa")
 
+
+
+
+
+
+
+
+
+
+
+
+
 class Factura(Base):
     __tablename__ = "factura"
 
