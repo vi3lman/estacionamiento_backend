@@ -110,12 +110,6 @@ def crear_ocupacion(ocupacion: OcupacionCreate,db: Session = Depends(get_db)):
     return create_ocupacion(db, ocupacion)
 
 
-@app.post("/ocupaciones")
-def crear_ocupacion(ocupacion: OcupacionCreate,db: Session = Depends(get_db)):
-    return create_ocupacion(db, ocupacion)
-
-
-
 @app.post("/espacios/{id_espacio}/infraccion", response_model=OcupacionRead)
 def reportar_infraccion_endpoint(id_espacio: int, db: Session = Depends(get_db)):
     

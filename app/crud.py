@@ -87,6 +87,20 @@ def espacio_esta_ocupado(db: Session, id_espacio: int, fecha_hora_ingreso: datet
     ).all()
     return len(ocupaciones) > 0
 
+def vehiculo_tiene_ocupacion_activa(db: Session, chapa: str)->bool:
+    chapa_normalizada = chapa.strip().upper()
+    ocupacion_activa = (
+        db.query(Ocupacion)
+        .join(Vehiculo, Ocupacion.id_vehiculo == Vehiculo.id_vehiculo)
+        .filter(
+            Vehiculo.chapa == chapa_normalizada,
+            Ocupacion.estado == "confirmado",
+            Ocupacion.fecha_hora_fin_real == None
+        )
+        .first()
+    )
+    return ocupacion_activa is not None
+
 
 # CRUD para Vehiculo
 
@@ -123,6 +137,12 @@ def create_ocupacion(db: Session, ocupacion: OcupacionCreate) -> Ocupacion:
     try:
         # 1. Crear vehículo
         db_vehiculo = create_vehiculo(db, ocupacion.vehiculo)
+
+        if vehiculo_tiene_ocupacion_activa(db, db_vehiculo.chapa):
+            raise HTTPException(
+                status_code=409,
+                detail="El vehiculo ya tiene una ocupacion activa. Debe registrar la salida antes de crear otra ocupacion."
+            )
 
         # 2. Crear conductor
         db_conductor = create_conductor(db, ocupacion.conductor)
