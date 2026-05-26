@@ -77,7 +77,7 @@ class Tarifa(Base):
     id_ocupacion = Column(Integer, ForeignKey("ocupacion.id_ocupacion", ondelete="CASCADE"), nullable=False, unique=True)
     monto_tarifa_base = Column(Numeric(10, 2), nullable=False)  # Monto base de la tarifa
     monto_multa = Column(Numeric(10, 2), nullable=False, default=0.00)  # Monto de la multa por exceder el tiempo estimado
-    estado_multa = Column(String, nullable=False, default="NO APLICA")  # "APLICA" o "PENDIENTE" o "PAGADA"
+    estado_multa = Column(String, nullable=False, default="NO APLICA")  # "APLICA" o "PENDIENTE" o "PAGADA" "NO APLICA"
 
     # Relación para navegar entre objetos en Python
     ocupacion = relationship("Ocupacion", back_populates="tarifa", uselist=False)

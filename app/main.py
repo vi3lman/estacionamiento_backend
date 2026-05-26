@@ -140,3 +140,32 @@ def marcar_salida_endpoint(id_ocupacion: int, db: Session = Depends(get_db)):
         )
     return ocupacion_finalizada
 
+@app.post("/ocupaciones/{id_ocupacion}/cancelar", response_model=OcupacionRead)
+def cancelar_ocupacion_endpoint(id_ocupacion: int, db: Session = Depends(get_db)):
+    ocupacion_cancelada = cancelar_ocupacion(db=db, id_ocupacion=id_ocupacion)
+    
+    if not ocupacion_cancelada:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"No se encontró la ocupación con id {id_ocupacion} o ya fue finalizada/cancelada."
+        )
+        
+    return ocupacion_cancelada
+
+@app.post("/ocupaciones/{id_ocupacion}/modificar", response_model=OcupacionRead)
+def modificar_ocupacion_endpoint(id_ocupacion: int, nueva_fecha_hora_inicio: datetime, nuevo_tiempo_estimado: int, db: Session = Depends(get_db)):
+    ocupacion_modificada = modificar_ocupacion(db=db, id_ocupacion=id_ocupacion, nueva_fecha_hora_inicio=nueva_fecha_hora_inicio, nuevo_tiempo_estimado=nuevo_tiempo_estimado)
+
+    if not ocupacion_modificada:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se encontró la ocupación con id {id_ocupacion}."
+        )
+    
+    if datetime.now() > nueva_fecha_hora_inicio - timedelta(hours=8):
+        raise HTTPException(
+            status_code=400,
+            detail="La ocupación solo puede ser modificada con al menos 8 horas de anticipación."
+        ) 
+
+    return ocupacion_modificada

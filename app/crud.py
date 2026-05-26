@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+
 from .schemas import *
 from .models import Ocupacion, Tarifa, Conductor, Vehiculo, Espacio, Calle
 from sqlalchemy.orm import Session
@@ -58,6 +60,7 @@ def create_vehiculo(db: Session, vehiculo: VehiculoCreate) -> Vehiculo:
     db.flush()
 
     return db_vehiculo
+
 def get_espacios_libres_por_calle(db: Session, id_calle: int, fecha_hora_ingreso: datetime, tiempo_estimado: int)->list[Espacio]:
     espacios = db.query(Espacio).filter(Espacio.id_calle == id_calle).all()
     espacios_libres: list[Espacio]= []
@@ -124,7 +127,7 @@ def create_ocupacion(db: Session, ocupacion: OcupacionCreate) -> Ocupacion:
         # 2. Crear conductor
         db_conductor = create_conductor(db, ocupacion.conductor)
 
-        db.add(db_conductor)
+        #db.add(db_conductor)
         db.flush()
 
         # 3. Calcular fecha de fin
@@ -230,12 +233,20 @@ def calcular_tarifa_precio(db: Session, tiempo_estimado: int)->Decimal:
 def marcar_salida_ocupacion(db: Session, id_ocupacion: int)->Optional[Ocupacion]:
     db_ocupacion = db.query(Ocupacion).filter(Ocupacion.id_ocupacion == id_ocupacion).first()
     fecha_hora_fin_real = datetime.now()
+
+
     if db_ocupacion:
         db_ocupacion.fecha_hora_fin_real = fecha_hora_fin_real
         db_ocupacion.estado = "finalizado"
 
-
-
+        #implementar logica para comprobar que no se pueda marcar salida antes de la fecha_hora_inicio, o que no se pueda marcar salida si la ocupacion ya esta cancelada o finalizada
+        #deberia estar en el main ya que utiliza http exceptions, pero lo dejo aca
+        if fecha_hora_fin_real < db_ocupacion.fecha_hora_inicio:
+            raise HTTPException(
+                status_code=400,
+                detail="No se puede marcar la salida antes de la fecha y hora de inicio de la ocupación."
+            )
+        
         if  fecha_hora_fin_real > db_ocupacion.fecha_hora_fin:
             db_ocupacion.tarifa.estado_multa = "APLICA"
             db_ocupacion.tarifa.monto_multa = calcular_multa(db_ocupacion.fecha_hora_fin_real, db_ocupacion.fecha_hora_fin)
@@ -278,3 +289,30 @@ def espacio_pertenece_a_calle(db: Session, id_espacio: int, id_calle: int) -> bo
 
 def get_conductores(db: Session, skip: int = 0, limit: int = 100)->list[Conductor]:
     return db.query(Conductor).offset(skip).limit(limit).all()
+
+
+def cancelar_ocupacion(db: Session, id_ocupacion: int)->Optional[Ocupacion]:
+    db_ocupacion = db.query(Ocupacion).filter(Ocupacion.id_ocupacion == id_ocupacion).first()
+    db_tarifa = db.query(Tarifa).filter(Tarifa.id_ocupacion == id_ocupacion).first()
+    if db_ocupacion:
+        if datetime.now() > db_ocupacion.fecha_hora_inicio - timedelta(hours=8):
+            raise HTTPException(
+                status_code=400,
+                detail="La ocupación solo puede ser cancelada con al menos 8 horas de anticipación."
+            ) 
+        db_ocupacion.estado = "cancelado"
+        db_tarifa.monto_tarifa_base = Decimal("0.00")
+        db.commit()
+        db.refresh(db_ocupacion)
+    return db_ocupacion
+
+def modificar_ocupacion(db: Session, id_ocupacion: int, nueva_fecha_hora_inicio: datetime, nuevo_tiempo_estimado: int)->Optional[Ocupacion]:
+    db_ocupacion = db.query(Ocupacion).filter(Ocupacion.id_ocupacion == id_ocupacion).first()
+    if db_ocupacion:
+        db_ocupacion.fecha_hora_inicio = nueva_fecha_hora_inicio
+        db_ocupacion.tiempo_estimado = nuevo_tiempo_estimado
+        db_ocupacion.fecha_hora_fin = nueva_fecha_hora_inicio + timedelta(minutes=nuevo_tiempo_estimado)
+        db_ocupacion.tarifa.monto_tarifa_base = calcular_tarifa_precio(db, nuevo_tiempo_estimado)
+        db.commit()
+        db.refresh(db_ocupacion)
+    return db_ocupacion
